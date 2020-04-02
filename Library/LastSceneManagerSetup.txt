@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/AStar/Scenes/AStar.unity
+  isLoaded: 1
+  isActive: 1
