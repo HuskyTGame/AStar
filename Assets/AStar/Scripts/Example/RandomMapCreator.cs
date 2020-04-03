@@ -23,6 +23,28 @@ namespace AStar.Example
         }
 
         /// <summary>
+        /// 获取指定数量的合法的地图随机种子
+        /// </summary>
+        /// <param 随机种子个数="count"></param>
+        /// <param 障碍物生成概率（0,1）="probability"></param>
+        /// <param 起始随机种子="startSeed"></param>
+        /// <param 尝试最大次数="times"></param>
+        /// <returns></returns>
+        public List<int> GetValidSeedList(int count, float probability, int startSeed, int times)
+        {
+            List<int> res = new List<int>();
+            for (int i = 0; i < count; i++)
+            {
+                int seed = TryToCreate(probability, startSeed, times);
+                if (seed != -1)
+                {
+                    res.Add(seed);
+                }
+                startSeed = seed + 1;
+            }
+            return res;
+        }
+        /// <summary>
         /// 尝试创建随机 Map
         /// </summary>
         /// <param 障碍物生成概率（0,1）="probability"></param>
@@ -39,7 +61,7 @@ namespace AStar.Example
                 Create(startSeed, probability);
                 if (CheckMapIsConnected())
                 {
-                    HTLogger.Debug("随机地图生成成功");
+                    //HTLogger.Debug("随机地图生成成功");
                     return startSeed;
                 }
                 else
@@ -58,6 +80,7 @@ namespace AStar.Example
         public void Create(int randomSeed, float probability)
         {
             List<Node> obstacleList = GenerateObstacleList(probability, mMapMgr.Width, mMapMgr.Height, randomSeed);
+            mMapMgr.Reset();
             AddObstacles(obstacleList);
         }
         /// <summary>

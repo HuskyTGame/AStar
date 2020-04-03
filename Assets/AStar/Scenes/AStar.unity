@@ -163,7 +163,9 @@ MonoBehaviour:
   Probability: 0.3
   RandomSeed: 0
   MaxTimes: 10000
-  LoopTimes: 20
+  LoopTimes: 10
+  Count: 20
+  MapNums: 20
   NormalColor: {r: 0.9245283, g: 0.9245283, b: 0.9245283, a: 0}
   StartColor: {r: 0, g: 0.735849, b: 0.046268284, a: 0}
   EndColor: {r: 0.8679245, g: 0.045033824, b: 0.09143098, a: 0}

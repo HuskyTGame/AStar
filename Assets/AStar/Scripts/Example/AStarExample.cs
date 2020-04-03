@@ -33,6 +33,10 @@ namespace AStar.Example
         public int MaxTimes;
         [Tooltip("寻路循环次数（测试使用）")]
         public int LoopTimes;
+        [Tooltip("实验次数（用于取平均值）")]
+        public int Count;
+        [Tooltip("实验的随机地图数量")]
+        public int MapNums;
         public Color NormalColor;
         public Color StartColor;
         public Color EndColor;
@@ -100,13 +104,13 @@ namespace AStar.Example
         {
             Init();
             CameraCtr.Setup(MapWidth, MapHeight);
-            GenerateRandomMap();
+            //GenerateRandomMap();
         }
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Q))
             {
-                ClickPathFindingBtn(LoopTimes);
+                ClickPathFindingBtn(LoopTimes, Count, MapNums);
             }
             if (Input.GetKeyDown(KeyCode.A))
             {
@@ -135,21 +139,49 @@ namespace AStar.Example
             HTLogger.Debug("随机种子：" + mCurrentSeed);
             SpawnMap();
         }
-        private void ClickPathFindingBtn(int times)
+        private void ClickPathFindingBtn(int times, int count, int mapNum)
         {
+            List<float> resTimesIn = new List<float>();
+            List<float> resTimesOut = new List<float>();
             Vector2 start = new Vector2(0, 0);
             Vector2 end = new Vector2(mMapMgr.Width - 1, mMapMgr.Height - 1);
-            mMapMgr.BuildMap();
-            mTimer.Begin(TIMER_KEY_ASTAR_PF);
-            for (int i = 0; i < times; i++)
+            //mMapMgr.BuildMap();
+            List<int> seedList = mRandomMapCreator.GetValidSeedList(mapNum, Probability, RandomSeed, MaxTimes);
+            for (int p = 0; p < seedList.Count; p++)
             {
-                mAStarMgr.FindPath(start, end);
+                mRandomMapCreator.Create(seedList[p], Probability);
+                mMapMgr.BuildMap();
+                for (int j = 0; j < count; j++)
+                {
+                    mTimer.Begin(TIMER_KEY_ASTAR_PF);
+                    for (int i = 0; i < times; i++)
+                    {
+                        mAStarMgr.FindPath(start, end);
+                    }
+                    mTimer.End(TIMER_KEY_ASTAR_PF);
+                    resTimesIn.Add(mTimer.GetSumTime(TIMER_KEY_ASTAR_PF));
+                }
+                resTimesIn.Sort();
+                float sumTimeIn = 0.0f;
+                for (int i = 1; i <= resTimesIn.Count - 2; i++)
+                {
+                    sumTimeIn += resTimesIn[i];
+                }
+                resTimesOut.Add((sumTimeIn / (resTimesIn.Count - 2)) / times);
             }
-            mTimer.End(TIMER_KEY_ASTAR_PF);
+            resTimesOut.Sort();
+            float sumTimeOut = 0.0f;
+            for (int i = 1; i <= resTimesOut.Count - 2; i++)
+            {
+                sumTimeOut += resTimesOut[i];
+            }
+            mFindPathTime = sumTimeOut / (resTimesOut.Count - 2);
             mPath = mAStarMgr.FindPath(start, end);
-            mFindPathTime = mTimer.GetSumTime(TIMER_KEY_ASTAR_PF);
+            //mFindPathTime = mTimer.GetSumTime(TIMER_KEY_ASTAR_PF);
             mFindPathCost = CalculatePathConsume(mPath);
-            HTLogger.Debug(string.Format("寻路 {0} 次：{1}毫秒", times, mFindPathTime));
+            SpawnMap();
+            HTLogger.Debug(string.Format("寻路 {0} 次：{1}毫秒", times, mFindPathTime * times));
+            HTLogger.Debug(string.Format("寻路 1 次：{0}毫秒", mFindPathTime));
             HTLogger.Debug("路径消耗：" + mFindPathCost);
         }
         private void SaveRunningData()
@@ -272,27 +304,55 @@ namespace AStar.Example
 
         private void SimpleAStarPathFinding()
         {
-            List<SimpleAStar.Point> obstacleList = new List<SimpleAStar.Point>();
-            for (int i = 0; i < MapWidth; i++)
-            {
-                for (int j = 0; j < MapHeight; j++)
-                {
-                    if (mMapMgr.Map[i, j].IsConnected == false)
-                    {
-                        obstacleList.Add(new SimpleAStar.Point(i, j));
-                    }
-                }
-            }
-            SimpleAStar.AStarS aStars = new SimpleAStar.AStarS(MapWidth, MapHeight, obstacleList);
+
             SimpleAStar.Point start = new SimpleAStar.Point(0, 0);
             SimpleAStar.Point end = new SimpleAStar.Point(MapWidth - 1, MapHeight - 1);
-            mTimer.Begin(TIMER_KEY_ASTAR_PF);
-            for (int i = 0; i < LoopTimes; i++)
+
+            List<float> resTimeListIn = new List<float>();
+            List<float> resTimeListOut = new List<float>();
+            List<int> seedList = mRandomMapCreator.GetValidSeedList(MapNums, Probability, RandomSeed, MaxTimes);
+            for (int p = 0; p < seedList.Count; p++)
             {
-                aStars.FindPath(start, end);
+                mRandomMapCreator.Create(seedList[p], Probability);
+                List<SimpleAStar.Point> obstacleList = new List<SimpleAStar.Point>();
+                for (int i = 0; i < MapWidth; i++)
+                {
+                    for (int j = 0; j < MapHeight; j++)
+                    {
+                        if (mMapMgr.Map[i, j].IsConnected == false)
+                        {
+                            obstacleList.Add(new SimpleAStar.Point(i, j));
+                        }
+                    }
+                }
+                SimpleAStar.AStarS aStars = new SimpleAStar.AStarS(MapWidth, MapHeight, obstacleList);
+                for (int j = 0; j < Count; j++)
+                {
+                    mTimer.Begin(TIMER_KEY_ASTAR_PF);
+                    for (int i = 0; i < LoopTimes; i++)
+                    {
+                        aStars.FindPath(start, end);
+                    }
+                    mTimer.End(TIMER_KEY_ASTAR_PF);
+                    resTimeListIn.Add(mTimer.GetSumTime(TIMER_KEY_ASTAR_PF));
+                }
+                resTimeListIn.Sort();
+                float sumTimeIn = 0.0f;
+                for (int i = 1; i <= resTimeListIn.Count - 2; i++)
+                {
+                    sumTimeIn += resTimeListIn[i];
+                }
+                resTimeListOut.Add((sumTimeIn / (resTimeListIn.Count - 2)) / LoopTimes);
+                mSimplePath = aStars.FindPath(start, end);
             }
-            mTimer.End(TIMER_KEY_ASTAR_PF);
-            mSimplePath = aStars.FindPath(start, end);
+            resTimeListOut.Sort();
+            float sumTimeOut = 0.0f;
+            for (int i = 1; i <= resTimeListOut.Count - 2; i++)
+            {
+                sumTimeOut += resTimeListOut[i];
+            }
+            float time = sumTimeOut / (resTimeListOut.Count - 2);
+
             List<Node> pathNodeList = new List<Node>();
             for (int i = 0; i < mSimplePath.Count; i++)
             {
@@ -300,8 +360,10 @@ namespace AStar.Example
                 pathNodeList.Add(new Node(point.X, point.Y));
             }
             int cost = CalculatePathConsume(pathNodeList);
-            float time = mTimer.GetSumTime(TIMER_KEY_ASTAR_PF);
-            HTLogger.Debug(string.Format("（简易 AStar）寻路 {0} 次：{1}毫秒", LoopTimes, time));
+            //float time = mTimer.GetSumTime(TIMER_KEY_ASTAR_PF);
+            //SpawnMap();
+            HTLogger.Debug(string.Format("（简易 AStar）寻路 {0} 次：{1}毫秒", LoopTimes, time * LoopTimes));
+            HTLogger.Debug(string.Format("（简易 AStar）寻路 1 次：{0}毫秒", time));
             HTLogger.Debug("（简易 AStar）路径消耗：" + cost);
         }
         public void PathFindingAnimationForSimple()

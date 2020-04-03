@@ -17,10 +17,7 @@ namespace AStar
     {
         private MapMgr mMapMgr;
         private List<Node> mOpenList;
-        /// <summary>
-        /// 关闭列表（HashSet 的 Add 操作效率高）
-        /// </summary>
-        private HashSet<Node> mCloseSet;
+        private List<Node> mCloseList;
         private List<Node> mRes;
         private Node up, down, left, right, leftUp, leftDown, rightUp, rightDown;
 
@@ -28,7 +25,7 @@ namespace AStar
         {
             mMapMgr = MapMgr.Instance;
             mOpenList = new List<Node>();
-            mCloseSet = new HashSet<Node>();
+            mCloseList = new List<Node>();
             mRes = new List<Node>();
             HTLogger.Info("AStarMgr init done.");
         }
@@ -56,7 +53,7 @@ namespace AStar
             if (start.IsConnected == false || end.IsConnected == false) return null;
             //2.初始化寻路
             mOpenList.Clear();
-            mCloseSet.Clear();
+            mCloseList.Clear();
             mRes.Clear();
             //3.将开始点放入关闭列表
             start.Parent = null;
@@ -64,7 +61,7 @@ namespace AStar
             start.H = 0;
             start.F = start.G + start.H;
             start.InCloseList = true;
-            mCloseSet.Add(start);
+            mCloseList.Add(start);
             while (true)
             {
                 //4.寻找周围的点  并放入开启列表中
@@ -72,21 +69,21 @@ namespace AStar
                 //周围无通路
                 if (mOpenList.Count == 0)
                 {
-                    HTLogger.Warning("AStar寻路失败，周围无通路！");
+                    //HTLogger.Warning("AStar寻路失败，周围无通路！");
                     //重置 标志位
-                    for (int i = 0; i < mMapMgr.Width; i++)
+                    for (int i = 0; i < mCloseList.Count; i++)
                     {
-                        for (int j = 0; j < mMapMgr.Height; j++)
-                        {
-                            mMapMgr.Map[i, j].InOpenList = false;
-                            mMapMgr.Map[i, j].InCloseList = false;
-                        }
+                        mCloseList[i].InCloseList = false;
+                    }
+                    for (int i = 0; i < mOpenList.Count; i++)
+                    {
+                        mOpenList[i].InOpenList = false;
                     }
                     return null;
                 }
                 //5.从开启列表中找到 F 最小的（小顶堆的根节点）
                 //6.放入关闭列表
-                mCloseSet.Add(mOpenList[0]);
+                mCloseList.Add(mOpenList[0]);
                 mOpenList[0].InCloseList = true;
                 //7.更新StartPoint
                 start = mOpenList[0];
@@ -96,13 +93,13 @@ namespace AStar
                 if (start == end) break;
             }
             //重置 标志位
-            for (int i = 0; i < mMapMgr.Width; i++)
+            for (int i = 0; i < mCloseList.Count; i++)
             {
-                for (int j = 0; j < mMapMgr.Height; j++)
-                {
-                    mMapMgr.Map[i, j].InOpenList = false;
-                    mMapMgr.Map[i, j].InCloseList = false;
-                }
+                mCloseList[i].InCloseList = false;
+            }
+            for (int i = 0; i < mOpenList.Count; i++)
+            {
+                mOpenList[i].InOpenList = false;
             }
             return GetPathRes(end);
         }
@@ -287,7 +284,9 @@ namespace AStar
         {
             if (list.Count == 1)
             {
-                list.Clear();
+                list[0].InOpenList = false;
+                list.RemoveAt(0);
+                //list.Clear();
                 return;
             }
             list[0].InOpenList = false;

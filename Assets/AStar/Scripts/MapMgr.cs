@@ -58,7 +58,7 @@ namespace AStar
                     mMap[i, j] = new Node(i, j, NodeType.Normal, true);
                 }
             }
-            HTLogger.Debug("Map reset done.");
+            //HTLogger.Debug("Map reset done.");
         }
         #endregion
 
